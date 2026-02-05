@@ -26,8 +26,8 @@ if (empty($_SESSION['initiated'])) {
 
 const DB_HOST = '127.0.0.1';
 const DB_NAME = 'invoice_finance';
-const DB_USER = 'invoice_finance_user';
-const DB_PASS = 'change_me';
+const DB_USER = 'root';
+const DB_PASS = '';
 
 const APP_URL = 'https://example.com';
 const SUPPORT_EMAIL = 'no-reply@example.com';
