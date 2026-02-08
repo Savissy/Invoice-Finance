@@ -252,18 +252,19 @@ async function ensureRegisteredWalletOrFail(address) {
   });
 
   const out = await res.json().catch(() => null);
+  if (!res.ok || !out?.ok) throw new Error(out?.error || "Wallet status check failed.");
 
-  if (!res.ok || !out?.ok) {
-    throw new Error(out?.error || "Wallet status check failed.");
+  // ✅ First-time user: allow them through so we can bind their first wallet
+  if (!out.hasVerifiedWallet) {
+    return { firstTime: true, allowed: true };
   }
 
+  // ✅ Existing user: must use already-verified wallet
   if (!out.allowed) {
-    throw new Error(
-      "This wallet is not registered for your account. Please connect your registered wallet."
-    );
+    throw new Error("This wallet is not registered for your account. Please connect your registered wallet.");
   }
 
-  return true;
+  return { firstTime: false, allowed: true };
 }
 
 function showModal(title, html) {
@@ -311,14 +312,13 @@ async function init() {
 
   walletAddress = await lucid.wallet.address();
 
-  // ✅ Block if wallet isn't the registered/verified wallet for this user
+  let status;
   try {
-    await ensureRegisteredWalletOrFail(walletAddress);
+    status = await ensureRegisteredWalletOrFail(walletAddress);
   } catch (e) {
     console.error(e);
     log("⛔ Wallet connect blocked: " + e.message);
 
-    // ✅ Modal warning for wrong wallet
     if (typeof showModal === "function") {
       showModal(
         "Wrong Wallet Connected",
@@ -331,16 +331,13 @@ async function init() {
         `
       );
     }
-
-    // Stop here so dApp features don't load
     return;
   }
 
-  // ✅ Wallet is registered, so binding should succeed (or refresh verification timestamp)
+  // ✅ If first-time, bind now (this becomes their registered wallet)
   try {
     await bindWalletToAccount();
 
-    // ✅ Modal success only once per wallet (so it doesn't pop every time)
     const modalKey = `walletLinkedShown:${walletAddress}`;
     if (typeof showModal === "function" && !localStorage.getItem(modalKey)) {
       showModal(
@@ -355,27 +352,23 @@ async function init() {
       );
       localStorage.setItem(modalKey, "1");
     }
-
   } catch (e) {
     console.error(e);
     log("⚠️ Wallet binding failed: " + e.message);
 
-    // Optional: show binding error modal (helps users understand what happened)
     if (typeof showModal === "function") {
       showModal(
         "Wallet Linking Failed",
         `
           <p>We couldn't link this wallet to your account right now.</p>
-          <p>Please try again. If the problem continues, contact support.</p>
+          <p>Please try again.</p>
           <p style="margin-top:10px;font-size:12px;color:#475569;">
             Error: <code>${e.message}</code>
           </p>
         `
       );
     }
-
-    // If you want binding to be mandatory, uncomment next line:
-    // return;
+    return; // for first-time users, you SHOULD stop if binding fails
   }
 
   scriptAddress = lucid.utils.validatorToAddress(invoiceScript);

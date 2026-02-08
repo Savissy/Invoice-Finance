@@ -12,6 +12,7 @@ $address = trim((string)($input['address'] ?? ''));
 
 if ($address === '') {
     http_response_code(400);
+    header('Content-Type: application/json');
     echo json_encode(['ok' => false, 'error' => 'Missing address']);
     exit;
 }
@@ -20,6 +21,16 @@ $pdo = db();
 $userId = (int)$_SESSION['user_id'];
 $addrHash = hash('sha256', strtolower($address));
 
+// 1) Does user already have ANY verified wallet?
+$stmt = $pdo->prepare("
+  SELECT COUNT(*) 
+  FROM user_wallets 
+  WHERE user_id = ? AND status = 'verified'
+");
+$stmt->execute([$userId]);
+$hasVerifiedWallet = ((int)$stmt->fetchColumn()) > 0;
+
+// 2) Is THIS address one of the verified wallets?
 $stmt = $pdo->prepare("
   SELECT 1
   FROM user_wallets
@@ -29,11 +40,17 @@ $stmt = $pdo->prepare("
   LIMIT 1
 ");
 $stmt->execute([$userId, $addrHash]);
+$isThisWalletVerified = (bool)$stmt->fetchColumn();
 
-$allowed = (bool)$stmt->fetchColumn();
+// Logic:
+// - If user has no verified wallet yet, we allow this wallet so it can be bound now.
+// - If user already has verified wallet(s), then only allow if this wallet matches.
+$allowed = $hasVerifiedWallet ? $isThisWalletVerified : true;
 
 header('Content-Type: application/json');
 echo json_encode([
   'ok' => true,
-  'allowed' => $allowed
+  'allowed' => $allowed,
+  'hasVerifiedWallet' => $hasVerifiedWallet,
+  'isThisWalletVerified' => $isThisWalletVerified
 ]);
