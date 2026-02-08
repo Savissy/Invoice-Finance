@@ -44,6 +44,8 @@ $rows = $stmt->fetchAll();
         <div style="color:#475569;font-size:13px;">Logged in as <?= e($admin['email'] ?? 'admin') ?></div>
       </div>
       <div>
+        <a href="/admin/wallet_lookup.php">Wallet Lookup</a>
+        &nbsp;|&nbsp;
         <a href="/admin/logout.php">Logout</a>
       </div>
     </div>

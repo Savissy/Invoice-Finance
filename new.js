@@ -473,6 +473,22 @@ const httpUrl = `https://ipfs.io/ipfs/${cid}`;
   const signed = await tx.sign().complete();
   const txHash = await signed.submit();
 
+// Log to backend
+await fetch("log_tx.php", {
+  method: "POST",
+  credentials: "include",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    tx_hash: txHash,
+    action_type: "create_invoice",              // change per action
+    invoice_ref: assetName,          // whatever you use
+    actor_wallet_address: walletAddress,
+    counterparty_wallet_address: walletAddress, // optional
+    amount_lovelace: 2_000_000n.toString(),                  // optional
+    asset_unit: "lovelace"
+  })
+});
+
   log("Invoice created: " + txHash);
   log("Document Minted And Transfered: " + txHash);
   log("Verify invoice Here: " + httpUrl);
@@ -557,6 +573,22 @@ async function fundInvoice(invoice) {
   const signed = await tx.sign().complete();
   const txHash = await signed.submit();
 
+// Log to backend
+await fetch("log_tx.php", {
+  method: "POST",
+  credentials: "include",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    tx_hash: txHash,
+    action_type: "fund_invoice",              // change per action
+    invoice_ref: nftUnit,          // whatever you use
+    actor_wallet_address: walletAddress,
+    counterparty_wallet_address: issuerAddr, // optional
+    amount_lovelace: d.idFaceValue.toString(),                  // optional
+    asset_unit: "lovelace"
+  })
+});
+
   log("Invoice funded: " + txHash);
   await loadInvoices();
 }
@@ -615,10 +647,100 @@ async function repayInvoice(invoiceUtxos) {
     const signed = await completed.sign().complete();
     const txHash = await signed.submit();
 
+// Log to backend
+await fetch("log_tx.php", {
+  method: "POST",
+  credentials: "include",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    tx_hash: txHash,
+    action_type: "repay_invoice",              // change per action
+    invoice_ref: nftUnit,          // whatever you use
+    actor_wallet_address: walletAddress,
+    counterparty_wallet_address: invAddr, // optional
+    amount_lovelace: payAmount.toString(),                  // optional
+    asset_unit: "lovelace"
+  })
+});
+
     log(`Invoice repaid & closed: ${txHash}`);
   }
 
   await loadInvoices();
+}
+
+function clearTxHistory() {
+  const res = document.getElementById("txResults");
+  const addr = document.getElementById("txAddr");
+  if (addr) addr.value = "";
+  if (res) res.innerHTML = "";
+}
+
+async function loadTxHistory() {
+  const addr = document.getElementById("txAddr").value.trim();
+  if (!addr) {
+    if (typeof showModal === "function") {
+      showModal("Missing Address", "<p>Please paste a wallet address.</p>");
+    } else {
+      alert("Please paste a wallet address.");
+    }
+    return;
+  }
+
+  const res = await fetch(`tx_history.php?address=${encodeURIComponent(addr)}`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Accept": "application/json" },
+  });
+
+  const out = await res.json().catch(() => null);
+
+  if (!res.ok || !out?.ok) {
+    const msg = out?.error || "Unable to fetch transaction history.";
+    if (typeof showModal === "function") showModal("Error", `<p>${msg}</p>`);
+    else alert(msg);
+    return;
+  }
+
+  const list = out.transactions || [];
+  const container = document.getElementById("txResults");
+
+  if (!list.length) {
+    container.innerHTML = `<div style="padding:12px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;">
+      No dApp transactions found for this address.
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+      ${list.map(t => `
+        <div style="padding:12px;border-bottom:1px solid #e2e8f0;">
+          <div style="font-weight:800;color:#0f172a;">${t.action_type}</div>
+
+          <div style="font-size:12px;color:#475569;margin-top:6px;">
+            Tx Hash:
+            <code style="
+              display:block;
+              margin-top:6px;
+              padding:8px 10px;
+              background:#f1f5f9;
+              border-radius:8px;
+              word-break:break-all;
+              overflow-wrap:anywhere;
+              white-space:normal;
+            ">${t.tx_hash}</code>
+          </div>
+
+          <div style="font-size:12px;color:#475569;margin-top:8px;">
+            ${t.invoice_ref ? `Invoice: <strong>${t.invoice_ref}</strong> • ` : ""}
+            ${t.amount_lovelace ? `Amount: <strong>${t.amount_lovelace}</strong> ${t.asset_unit || "lovelace"} • ` : ""}
+            Status: <strong>${t.status}</strong> • ${t.created_at}
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
 }
 
 /* =====================================================
@@ -630,3 +752,5 @@ function log(msg) {
 
 document.getElementById("connect").onclick = init;
 document.getElementById("createInvoice").onclick = createInvoice;
+document.getElementById("loadTxHistory").onclick = loadTxHistory;
+document.getElementById("clearTxHistory").onclick = clearTxHistory;

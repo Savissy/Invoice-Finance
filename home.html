@@ -583,6 +583,128 @@
       z-index: 1;
     }
 
+    /* Transaction History Styles */
+    .tx-search-wrapper {
+      background: linear-gradient(135deg, var(--gray-50), var(--white));
+      border: 2px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 30px;
+    }
+
+    .form-group {
+      margin-bottom: 0;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-800);
+      margin-bottom: 8px;
+      letter-spacing: 0.3px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 18px;
+      color: var(--gray-600);
+      pointer-events: none;
+    }
+
+    #txAddr {
+      padding-left: 48px;
+      background: var(--white);
+      border: 2px solid var(--gray-200);
+      border-radius: 10px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.3px;
+    }
+
+    #txAddr:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+      background: var(--white);
+    }
+
+    #txAddr::placeholder {
+      font-family: 'Inter', sans-serif;
+      letter-spacing: normal;
+      color: var(--gray-600);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-group .btn {
+      flex: 1;
+      justify-content: center;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 24px;
+      font-size: 15px;
+    }
+
+    #txResults {
+      margin-top: 30px;
+    }
+
+    .tx-results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--gray-200);
+    }
+
+    .tx-results-header h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--gray-800);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tx-count {
+      background: linear-gradient(135deg, var(--red), var(--red-dark));
+      color: var(--white);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gray-600);
+    }
+
+    .empty-state svg {
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      font-size: 16px;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .dashboard-grid,
@@ -606,22 +728,14 @@
       .dashboard-grid {
         padding: 0 20px;
       }
-    }
 
-    /* Empty State */
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--gray-600);
-    }
+      .btn-group {
+        flex-direction: column;
+      }
 
-    .empty-state svg {
-      margin-bottom: 20px;
-      opacity: 0.5;
-    }
-
-    .empty-state p {
-      font-size: 16px;
+      .btn-group .btn {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -867,6 +981,42 @@
     background: #b91c1c;
   }
 </style>
+
+<section class="card" id="txHistoryCard">
+  <h2>🔍 Transaction History</h2>
+  <p class="muted">
+    Search and view all Invoice Finance transactions recorded on this platform for any wallet address.
+  </p>
+
+  <div class="tx-search-wrapper">
+    <div class="form-group">
+      <label for="txAddr">Wallet Address</label>
+      <div class="input-wrapper">
+        <span class="input-icon">🔑</span>
+        <input 
+          type="text" 
+          id="txAddr" 
+          placeholder="Enter Cardano wallet address (addr1...)" 
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn primary" id="loadTxHistory">
+        <span>🔍</span>
+        Search Transactions
+      </button>
+      <button class="btn secondary" id="clearTxHistory">
+        <span>✕</span>
+        Clear Results
+      </button>
+    </div>
+  </div>
+
+  <div id="txResults"></div>
+</section>
 
   <!-- LOG PANEL -->
   <footer class="log-panel">
