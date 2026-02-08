@@ -11,7 +11,12 @@ require_once __DIR__ . '/auth.php';
 $errors = [];
 $success = null;
 
+// ✅ GET PDO ONCE
+$pdo = db();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    // CSRF check
     if (!validate_csrf($_POST['csrf_token'] ?? null)) {
         $errors[] = 'Invalid CSRF token. Please refresh the page and try again.';
     }
@@ -20,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $confirmPassword = $_POST['confirm_password'] ?? '';
 
+    // Validation
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors[] = 'Please enter a valid email address.';
     }
@@ -33,27 +39,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!$errors) {
-        $passwordHash = password_hash($password, PASSWORD_BCRYPT);
-
         try {
-            $stmt = db()->prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)');
-            $stmt->execute([$email, $passwordHash]);
-            $userId = (int) db()->lastInsertId();
+            // Start transaction
+            $pdo->beginTransaction();
 
+            // Create user
+            $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+
+            $stmt = $pdo->prepare(
+                "INSERT INTO users (email, password_hash)
+                 VALUES (:email, :password_hash)"
+            );
+
+            $stmt->execute([
+                ':email' => $email,
+                ':password_hash' => $passwordHash
+            ]);
+
+            $userId = (int) $pdo->lastInsertId();
+
+            // Create email verification token
             $token = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $token);
             $expiresAt = (new DateTime('+1 day'))->format('Y-m-d H:i:s');
 
-            $stmt = db()->prepare('INSERT INTO email_verifications (user_id, token_hash, expires_at) VALUES (?, ?, ?)');
-            $stmt->execute([$userId, $tokenHash, $expiresAt]);
+            $stmt = $pdo->prepare(
+                "INSERT INTO email_verifications (user_id, token_hash, expires_at)
+                 VALUES (:user_id, :token_hash, :expires_at)"
+            );
 
+            $stmt->execute([
+                ':user_id' => $userId,
+                ':token_hash' => $tokenHash,
+                ':expires_at' => $expiresAt
+            ]);
+
+            // Commit before sending email
+            $pdo->commit();
+
+            // Send verification email (off-DB)
             send_verification_email($email, $token);
 
             $success = 'Registration successful! Please check your email to verify your account.';
-        } catch (PDOException $exception) {
-            if ((int) $exception->errorInfo[1] === 1062) {
+
+        } catch (PDOException $e) {
+            // Rollback if anything fails
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            // Duplicate email
+            if ((int) ($e->errorInfo[1] ?? 0) === 1062) {
                 $errors[] = 'An account with this email already exists.';
             } else {
+                error_log($e->getMessage());
                 $errors[] = 'Unable to create account. Please try again later.';
             }
         }
@@ -67,15 +106,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Register - Invoice Finance</title>
   <style>
-    body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
-    .container { max-width: 480px; margin: 60px auto; background: #fff; padding: 32px; border-radius: 12px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .container {
+      max-width: 480px;
+      margin: 60px auto;
+      background: #fff;
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
     h1 { margin-bottom: 12px; }
-    label { display: block; margin-top: 16px; font-weight: 600; }
-    input { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #cbd5f5; }
-    button { margin-top: 24px; width: 100%; padding: 12px; border: none; background: #dc2626; color: #fff; font-weight: 700; border-radius: 8px; cursor: pointer; }
-    .error { background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 8px; margin-top: 16px; }
-    .success { background: #dcfce7; color: #166534; padding: 12px; border-radius: 8px; margin-top: 16px; }
-    .link { margin-top: 16px; text-align: center; }
+    label {
+      display: block;
+      margin-top: 16px;
+      font-weight: 600;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      border-radius: 8px;
+      border: 1px solid #cbd5f5;
+    }
+    button {
+      margin-top: 24px;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      background: #dc2626;
+      color: #fff;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+    .success {
+      background: #dcfce7;
+      color: #166534;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+    .link {
+      margin-top: 16px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -101,6 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <form method="post" action="">
       <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+
       <label for="email">Email</label>
       <input type="email" id="email" name="email" required>
 

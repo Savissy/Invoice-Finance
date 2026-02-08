@@ -190,6 +190,60 @@ async function loadInvoices() {
   }
 }
 
+async function bindWalletToAccount() {
+  // Make sure session cookie is sent
+  const challengeRes = await fetch("wallet_challenge.php", {
+    method: "GET",
+    credentials: "include",
+    headers: { "Accept": "application/json" },
+  });
+
+  if (!challengeRes.ok) {
+    const txt = await challengeRes.text();
+    throw new Error("Challenge failed: " + txt);
+  }
+
+  const challenge = await challengeRes.json();
+  const message = challenge.message;
+
+  // Lace/CIP-30 signData expects (address, payloadHex)
+  const api = await window.cardano.lace.enable();
+
+  // Convert message string to hex
+  const messageHex = Array.from(new TextEncoder().encode(message))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  // Sign
+  if (typeof api.signData !== "function") {
+    throw new Error("Wallet does not support signData(). Try another wallet or enable data signing.");
+  }
+
+  const sig = await api.signData(walletAddress, messageHex);
+  // sig typically includes { signature, key } (format varies by wallet)
+
+  // Send proof to backend
+  const bindRes = await fetch("wallet_bind.php", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    body: JSON.stringify({
+      address: walletAddress,
+      message,
+      signature: sig.signature ?? sig,   // support either shape
+      key: sig.key ?? null               // optional, for audit
+    }),
+  });
+
+  const out = await bindRes.json().catch(() => null);
+  if (!bindRes.ok || !out?.ok) {
+    throw new Error(out?.error || "Wallet bind failed.");
+  }
+
+  log("✅ Wallet bound to account: " + walletAddress);
+}
+
+
 /* =====================================================
    INIT
 ===================================================== */
@@ -203,6 +257,17 @@ async function init() {
   lucid.selectWallet(api);
 
   walletAddress = await lucid.wallet.address();
+
+  // ✅ Bind wallet to logged-in account (requires PHP session)
+  try {
+    await bindWalletToAccount();
+  } catch (e) {
+    console.error(e);
+    log("⚠️ Wallet binding failed: " + e.message);
+    // You can decide to block app usage here if binding is mandatory
+    // throw e;
+  }
+
   scriptAddress = lucid.utils.validatorToAddress(invoiceScript);
   nftPolicyId   = lucid.utils.mintingPolicyToId(nftPolicy);
 

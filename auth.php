@@ -60,12 +60,3 @@ function require_kyc_approved(): void
     }
 }
 
-function send_verification_email(string $email, string $token): void
-{
-    $verifyLink = APP_URL . '/verify.php?token=' . urlencode($token);
-    $subject = 'Verify your Invoice Finance account';
-    $message = "Please verify your email by clicking the link below:\n\n" . $verifyLink . "\n\nIf you did not request this, you can ignore this email.";
-    $headers = 'From: ' . SUPPORT_EMAIL;
-
-    @mail($email, $subject, $message, $headers);
-}

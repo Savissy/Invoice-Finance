@@ -10,7 +10,12 @@ require_once __DIR__ . '/auth.php';
 
 $errors = [];
 
+// ✅ GET PDO INSTANCE (THIS WAS MISSING)
+$pdo = db();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    // CSRF check
     if (!validate_csrf($_POST['csrf_token'] ?? null)) {
         $errors[] = 'Invalid CSRF token. Please refresh the page and try again.';
     }
@@ -19,26 +24,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     if (!$errors) {
-        $stmt = db()->prepare('SELECT id, email, password_hash, email_verified_at FROM users WHERE email = ?');
-        $stmt->execute([$email]);
+        // ✅ FIXED QUERY + PARAM BINDING
+        $stmt = $pdo->prepare(
+            "SELECT id, email, password_hash, email_verified_at
+             FROM users
+             WHERE email = :email
+             LIMIT 1"
+        );
+
+        $stmt->execute([
+            ':email' => $email
+        ]);
+
         $user = $stmt->fetch();
 
+        // Invalid credentials
         if (!$user || !password_verify($password, $user['password_hash'])) {
             $errors[] = 'Invalid email or password.';
         } else {
+            // Successful login
             session_regenerate_id(true);
             $_SESSION['user_id'] = (int) $user['id'];
 
+            // Email verification gate
             if (empty($user['email_verified_at'])) {
                 redirect('/verify_notice.php');
             }
 
+            // KYC gate
             $submission = latest_kyc_submission((int) $user['id']);
+
             if ($submission && $submission['status'] === 'approved') {
-                redirect('/app.php');
+                redirect('/app.php'); // wallet + dApp access
             }
 
-            redirect('/kyc.php');
+            redirect('/kyc.php'); // force KYC
         }
     }
 }
@@ -50,14 +70,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Invoice Finance</title>
   <style>
-    body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
-    .container { max-width: 480px; margin: 60px auto; background: #fff; padding: 32px; border-radius: 12px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .container {
+      max-width: 480px;
+      margin: 60px auto;
+      background: #fff;
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
     h1 { margin-bottom: 12px; }
-    label { display: block; margin-top: 16px; font-weight: 600; }
-    input { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #cbd5f5; }
-    button { margin-top: 24px; width: 100%; padding: 12px; border: none; background: #16a34a; color: #fff; font-weight: 700; border-radius: 8px; cursor: pointer; }
-    .error { background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 8px; margin-top: 16px; }
-    .link { margin-top: 16px; text-align: center; }
+    label {
+      display: block;
+      margin-top: 16px;
+      font-weight: 600;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      border-radius: 8px;
+      border: 1px solid #cbd5f5;
+    }
+    button {
+      margin-top: 24px;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      background: #16a34a;
+      color: #fff;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+    .link {
+      margin-top: 16px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -77,6 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <form method="post" action="">
       <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+
       <label for="email">Email</label>
       <input type="email" id="email" name="email" required>
 
