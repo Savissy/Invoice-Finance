@@ -605,15 +605,23 @@ async function repayInvoice(invoiceUtxos) {
       .collectFrom([invoiceUtxo], repayRedeemer)
       .attachSpendingValidator(invoiceScript);
 
-    // 1️⃣ Pay investor (principal + profit)
+    // 1️⃣ Pay investor(s) (principal + profit)
     const profit = d.idRepayment - d.idFaceValue;
 
+    // ✅ Collect these for backend logging
+    const invAddrs = [];
+    let totalPaid = 0n;
+
     for (const inv of d.idInvestors) {
-      const payAmount = inv.invAmount + profit;
+      const payAmount = inv.invAmount + profit; // ✅ this is the per-investor payout
       const invAddr = lucid.utils.credentialToAddress({
         type: "Key",
         hash: inv.invPkh,
       });
+
+      invAddrs.push(invAddr);
+      totalPaid += payAmount;
+
       tx = tx.payToAddress(invAddr, { lovelace: payAmount });
     }
 
@@ -631,8 +639,7 @@ async function repayInvoice(invoiceUtxos) {
     );
 
     // 3️⃣ Keep NFT locked OR burn it (your choice)
-    const nftUnit =
-      d.idInvoiceNFT.currencySymbol + d.idInvoiceNFT.tokenName;
+    const nftUnit = d.idInvoiceNFT.currencySymbol + d.idInvoiceNFT.tokenName;
 
     tx = tx.payToContract(
       scriptAddress,
@@ -647,21 +654,22 @@ async function repayInvoice(invoiceUtxos) {
     const signed = await completed.sign().complete();
     const txHash = await signed.submit();
 
-// Log to backend
-await fetch("log_tx.php", {
-  method: "POST",
-  credentials: "include",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    tx_hash: txHash,
-    action_type: "repay_invoice",              // change per action
-    invoice_ref: nftUnit,          // whatever you use
-    actor_wallet_address: walletAddress,
-    counterparty_wallet_address: invAddr, // optional
-    amount_lovelace: payAmount.toString(),                  // optional
-    asset_unit: "lovelace"
-  })
-});
+    // ✅ Log to backend (safe JSON: BigInt -> string)
+    await fetch("log_tx.php", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tx_hash: txHash,
+        action_type: "repay_invoice",
+        invoice_ref: nftUnit,
+        actor_wallet_address: walletAddress,
+        // multiple investors → store as comma-separated list
+        counterparty_wallet_address: invAddrs.join(","),
+        amount_lovelace: totalPaid.toString(),
+        asset_unit: "lovelace",
+      }),
+    });
 
     log(`Invoice repaid & closed: ${txHash}`);
   }

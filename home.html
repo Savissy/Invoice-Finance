@@ -245,9 +245,9 @@
 
     .dashboard-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 30px;
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 80px auto 100px;
       padding: 0 60px;
     }
@@ -277,6 +277,10 @@
       animation-delay: 0.3s;
     }
 
+    .dashboard-card:nth-child(4) {
+      animation-delay: 0.4s;
+    }
+
     @keyframes fadeInUp {
       from { opacity: 0; transform: translateY(40px); }
       to { opacity: 1; transform: translateY(0); }
@@ -297,6 +301,10 @@
       background: linear-gradient(90deg, transparent, var(--green), transparent);
     }
 
+    .dashboard-card.blue::before {
+      background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+    }
+
     .dashboard-card:hover::before {
       left: 100%;
     }
@@ -311,6 +319,10 @@
       border-color: var(--green);
     }
 
+    .dashboard-card.blue:hover {
+      border-color: #3b82f6;
+    }
+
     .dashboard-icon {
       font-size: 64px;
       margin-bottom: 20px;
@@ -323,6 +335,10 @@
 
     .dashboard-card:nth-child(3) .dashboard-icon {
       animation-delay: 1s;
+    }
+
+    .dashboard-card:nth-child(4) .dashboard-icon {
+      animation-delay: 1.5s;
     }
 
     @keyframes iconPulse {
@@ -706,6 +722,12 @@
     }
 
     /* Responsive */
+    @media (max-width: 1200px) {
+      .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
     @media (max-width: 768px) {
       .dashboard-grid,
       .stats-grid {
@@ -792,6 +814,13 @@
         <h3>My Funded Invoices</h3>
         <p>Track your funded invoices and manage repayments</p>
         <button class="btn secondary">View Dashboard →</button>
+      </div>
+
+      <div class="dashboard-card blue" onclick="showPage('historyPage')">
+        <div class="dashboard-icon">🔍</div>
+        <h3>Transaction History</h3>
+        <p>Search and view all platform transactions by wallet address</p>
+        <button class="btn secondary">View History →</button>
       </div>
     </div>
   </div>
@@ -900,123 +929,138 @@
     </main>
   </div>
 
-  <!-- Notification Modal -->
-<div id="notifyModal" class="nm-overlay" style="display:none;">
-  <div class="nm-modal" role="dialog" aria-modal="true" aria-labelledby="nmTitle">
-    <h3 id="nmTitle" class="nm-title"></h3>
-    <div id="nmBody" class="nm-body"></div>
-    <div class="nm-actions">
-      <button id="nmOk" class="nm-btn">OK</button>
+  <!-- TRANSACTION HISTORY PAGE -->
+  <div id="historyPage" class="page">
+    <div class="dashboard-header">
+      <div class="dashboard-title">
+        <span class="icon">🔍</span>
+        <h1>Transaction History</h1>
+      </div>
+      <button class="back-btn" onclick="showPage('homePage')">
+        ← Back to Home
+      </button>
     </div>
+
+    <main class="container">
+      <section class="card" id="txHistoryCard">
+        <h2>🔍 Wallet Transaction Lookup</h2>
+        <p class="muted">
+          Search and view all Invoice Finance transactions recorded on this platform for any wallet address.
+        </p>
+
+        <div class="tx-search-wrapper">
+          <div class="form-group">
+            <label for="txAddr">Wallet Address</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔑</span>
+              <input 
+                type="text" 
+                id="txAddr" 
+                placeholder="Enter Cardano wallet address (addr1...)" 
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+          </div>
+
+          <div class="btn-group">
+            <button class="btn primary" id="loadTxHistory">
+              <span>🔍</span>
+              Search Transactions
+            </button>
+            <button class="btn secondary" id="clearTxHistory">
+              <span>✕</span>
+              Clear Results
+            </button>
+          </div>
+        </div>
+
+        <div id="txResults"></div>
+      </section>
+    </main>
   </div>
-</div>
 
-<style>
-  .nm-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    padding: 16px;
-  }
-
-  .nm-modal {
-    width: min(520px, 100%);
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
-    padding: 20px 20px 16px;
-    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    color: #0f172a;
-  }
-
-  .nm-title {
-    margin: 0 0 12px;
-    font-size: 18px;
-    font-weight: 700;
-    color: #0f172a;
-  }
-
-  .nm-body {
-    font-size: 14px;
-    line-height: 1.55;
-    color: #334155;
-  }
-
-  /* ✅ Proper wrapping for long wallet addresses */
-  .nm-body code {
-    display: block;
-    margin-top: 8px;
-    padding: 8px 10px;
-    background: #f1f5f9;
-    border-radius: 8px;
-    font-size: 12px;
-    color: #0f172a;
-    word-break: break-all;
-    overflow-wrap: anywhere;
-    white-space: normal;
-  }
-
-  .nm-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 18px;
-  }
-
-  .nm-btn {
-    padding: 10px 18px;
-    border: none;
-    border-radius: 10px;
-    background: #dc2626;
-    color: #ffffff;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.15s ease;
-  }
-
-  .nm-btn:hover {
-    background: #b91c1c;
-  }
-</style>
-
-<section class="card" id="txHistoryCard">
-  <h2>🔍 Transaction History</h2>
-  <p class="muted">
-    Search and view all Invoice Finance transactions recorded on this platform for any wallet address.
-  </p>
-
-  <div class="tx-search-wrapper">
-    <div class="form-group">
-      <label for="txAddr">Wallet Address</label>
-      <div class="input-wrapper">
-        <span class="input-icon">🔑</span>
-        <input 
-          type="text" 
-          id="txAddr" 
-          placeholder="Enter Cardano wallet address (addr1...)" 
-          autocomplete="off"
-          spellcheck="false"
-        />
+  <!-- Notification Modal -->
+  <div id="notifyModal" class="nm-overlay" style="display:none;">
+    <div class="nm-modal" role="dialog" aria-modal="true" aria-labelledby="nmTitle">
+      <h3 id="nmTitle" class="nm-title"></h3>
+      <div id="nmBody" class="nm-body"></div>
+      <div class="nm-actions">
+        <button id="nmOk" class="nm-btn">OK</button>
       </div>
     </div>
-
-    <div class="btn-group">
-      <button class="btn primary" id="loadTxHistory">
-        <span>🔍</span>
-        Search Transactions
-      </button>
-      <button class="btn secondary" id="clearTxHistory">
-        <span>✕</span>
-        Clear Results
-      </button>
-    </div>
   </div>
 
-  <div id="txResults"></div>
-</section>
+  <style>
+    .nm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+
+    .nm-modal {
+      width: min(520px, 100%);
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
+      padding: 20px 20px 16px;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: #0f172a;
+    }
+
+    .nm-title {
+      margin: 0 0 12px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .nm-body {
+      font-size: 14px;
+      line-height: 1.55;
+      color: #334155;
+    }
+
+    /* ✅ Proper wrapping for long wallet addresses */
+    .nm-body code {
+      display: block;
+      margin-top: 8px;
+      padding: 8px 10px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #0f172a;
+      word-break: break-all;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
+
+    .nm-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 18px;
+    }
+
+    .nm-btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 10px;
+      background: #dc2626;
+      color: #ffffff;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .nm-btn:hover {
+      background: #b91c1c;
+    }
+  </style>
 
   <!-- LOG PANEL -->
   <footer class="log-panel">
