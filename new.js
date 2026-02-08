@@ -243,6 +243,59 @@ async function bindWalletToAccount() {
   log("✅ Wallet bound to account: " + walletAddress);
 }
 
+async function ensureRegisteredWalletOrFail(address) {
+  const res = await fetch("wallet_status.php", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    body: JSON.stringify({ address }),
+  });
+
+  const out = await res.json().catch(() => null);
+
+  if (!res.ok || !out?.ok) {
+    throw new Error(out?.error || "Wallet status check failed.");
+  }
+
+  if (!out.allowed) {
+    throw new Error(
+      "This wallet is not registered for your account. Please connect your registered wallet."
+    );
+  }
+
+  return true;
+}
+
+function showModal(title, html) {
+  const overlay = document.getElementById("notifyModal");
+  const t = document.getElementById("nmTitle");
+  const b = document.getElementById("nmBody");
+  const ok = document.getElementById("nmOk");
+
+  t.textContent = title;
+  b.innerHTML = html;
+
+  overlay.style.display = "flex";
+
+  const close = () => {
+    overlay.style.display = "none";
+    ok.removeEventListener("click", close);
+    overlay.removeEventListener("click", onOverlayClick);
+    document.removeEventListener("keydown", onEsc);
+  };
+
+  const onOverlayClick = (e) => {
+    if (e.target === overlay) close();
+  };
+
+  const onEsc = (e) => {
+    if (e.key === "Escape") close();
+  };
+
+  ok.addEventListener("click", close);
+  overlay.addEventListener("click", onOverlayClick);
+  document.addEventListener("keydown", onEsc);
+}
 
 /* =====================================================
    INIT
@@ -258,20 +311,77 @@ async function init() {
 
   walletAddress = await lucid.wallet.address();
 
-  // ✅ Bind wallet to logged-in account (requires PHP session)
+  // ✅ Block if wallet isn't the registered/verified wallet for this user
+  try {
+    await ensureRegisteredWalletOrFail(walletAddress);
+  } catch (e) {
+    console.error(e);
+    log("⛔ Wallet connect blocked: " + e.message);
+
+    // ✅ Modal warning for wrong wallet
+    if (typeof showModal === "function") {
+      showModal(
+        "Wrong Wallet Connected",
+        `
+          <p>This wallet is <strong>not registered</strong> to your Invoice Finance account.</p>
+          <p>Please connect your <strong>registered wallet address</strong> to continue using the dApp.</p>
+          <p style="margin-top:10px;font-size:12px;color:#475569;">
+            Detected wallet: <code>${walletAddress}</code>
+          </p>
+        `
+      );
+    }
+
+    // Stop here so dApp features don't load
+    return;
+  }
+
+  // ✅ Wallet is registered, so binding should succeed (or refresh verification timestamp)
   try {
     await bindWalletToAccount();
+
+    // ✅ Modal success only once per wallet (so it doesn't pop every time)
+    const modalKey = `walletLinkedShown:${walletAddress}`;
+    if (typeof showModal === "function" && !localStorage.getItem(modalKey)) {
+      showModal(
+        "Wallet Linked Successfully",
+        `
+          <p>Your connected wallet has been <strong>linked to your account</strong>.</p>
+          <p><strong>Important:</strong> Always use this same wallet whenever accessing the dApp.</p>
+          <p style="margin-top:10px;font-size:12px;color:#475569;">
+            Linked wallet: <code>${walletAddress}</code>
+          </p>
+        `
+      );
+      localStorage.setItem(modalKey, "1");
+    }
+
   } catch (e) {
     console.error(e);
     log("⚠️ Wallet binding failed: " + e.message);
-    // You can decide to block app usage here if binding is mandatory
-    // throw e;
+
+    // Optional: show binding error modal (helps users understand what happened)
+    if (typeof showModal === "function") {
+      showModal(
+        "Wallet Linking Failed",
+        `
+          <p>We couldn't link this wallet to your account right now.</p>
+          <p>Please try again. If the problem continues, contact support.</p>
+          <p style="margin-top:10px;font-size:12px;color:#475569;">
+            Error: <code>${e.message}</code>
+          </p>
+        `
+      );
+    }
+
+    // If you want binding to be mandatory, uncomment next line:
+    // return;
   }
 
   scriptAddress = lucid.utils.validatorToAddress(invoiceScript);
   nftPolicyId   = lucid.utils.mintingPolicyToId(nftPolicy);
 
-  log("Wallet connected");
+  log("Wallet connected (registered)");
   log("Invoice Script: " + scriptAddress);
   log("NFT Policy ID: " + nftPolicyId);
 
