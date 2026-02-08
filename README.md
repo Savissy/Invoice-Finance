@@ -1,9 +1,9 @@
 
+---
 
-```markdown
 # 📄 Invoice Finance — Cardano dApp
 
-A **full-stack tokenized invoice financing platform on Cardano**, enabling verified businesses to tokenize invoices, receive funding from investors, and enforce repayment on-chain — with real-world accountability via **email authentication, KYC, wallet binding, admin review, and transaction history**.
+A **full-stack, production-ready tokenized invoice financing platform** built on **Cardano**, enabling businesses to tokenize invoices, raise liquidity from investors, and enforce repayments transparently — with **on-chain logic, verified users, KYC, wallet binding, admin review, and transaction history**.
 
 ---
 
@@ -14,7 +14,7 @@ A **full-stack tokenized invoice financing platform on Cardano**, enabling verif
 3. [System Architecture](#system-architecture)
 4. [Tech Stack](#tech-stack)
 5. [Smart Contract Design](#smart-contract-design)
-6. [Frontend & Off-Chain Logic](#frontend--off-chain-logic)
+6. [Off-Chain & Frontend](#off-chain--frontend)
 7. [Backend & Authentication](#backend--authentication)
 8. [KYC & Compliance Flow](#kyc--compliance-flow)
 9. [Wallet Binding & Access Control](#wallet-binding--access-control)
@@ -24,7 +24,7 @@ A **full-stack tokenized invoice financing platform on Cardano**, enabling verif
 13. [Local Development Setup](#local-development-setup)
 14. [Environment Configuration](#environment-configuration)
 15. [Database Schema (High Level)](#database-schema-high-level)
-16. [User & Platform Flow](#user--platform-flow)
+16. [Usage Flow](#usage-flow)
 17. [Limitations & Future Improvements](#limitations--future-improvements)
 18. [License](#license)
 
@@ -32,68 +32,79 @@ A **full-stack tokenized invoice financing platform on Cardano**, enabling verif
 
 ## Overview
 
-**Invoice Finance** is a decentralized application (dApp) built on **Cardano** that allows businesses to raise liquidity by tokenizing invoices while providing investors transparent, enforceable repayment guarantees.
+**Invoice Finance** allows verified businesses to:
 
-The platform combines:
-- **On-chain enforcement (Plutus)**
-- **Off-chain coordination (Lucid)**
-- **Real-world identity verification (KYC + email)**
-- **Admin oversight**
-- **Transaction auditability**
+* tokenize invoices on Cardano,
+* receive funding from investors,
+* repay principal + profit on-chain,
+* and maintain **real-world accountability** via KYC and wallet binding.
 
-This is not a demo — it is a production-style architecture.
+Unlike simple DeFi demos, this platform integrates:
+
+* **real user identity verification**
+* **admin oversight**
+* **transaction auditability**
+* **wallet-to-account enforcement**
 
 ---
 
 ## Key Features
 
 ### 🧾 Invoice Financing
-- Invoice tokenization (NFT-based)
-- Pool deposits & investor funding
-- Principal + profit repayment
-- Claim creation, voting, and execution
 
-### 🔐 Identity & Access
-- Email/password authentication
-- Email verification
-- KYC document submission
-- Admin-approved access only
+* Invoice tokenization (NFT-based)
+* Pool funding by investors
+* Repayment with profit
+* Claim creation, voting, and execution
 
-### 👛 Wallet Binding
-- First wallet auto-binds to user account
-- Subsequent wallets blocked
-- UI warnings for incorrect wallets
-- Prevents identity hopping
+### 🔐 Authentication & Identity
+
+* Email + password login
+* Email verification (SMTP)
+* KYC document upload
+* Admin KYC approval
+
+### 👛 Wallet Control
+
+* Wallet binding to verified user account
+* First wallet auto-bind
+* Subsequent wallet access blocked
+* UI warnings for incorrect wallets
 
 ### 📊 Transparency
-- dApp-level transaction logging
-- Wallet-based transaction history lookup
-- Admin wallet → user → contact tracing
+
+* dApp-level transaction history
+* Wallet-based transaction lookup
+* Admin wallet → user → KYC mapping
 
 ### 🛠 Admin Tools
-- Admin login & session isolation
-- KYC review & approval
-- Secure document viewer
-- Wallet lookup for defaulter tracing
+
+* Admin authentication
+* KYC review & approval
+* Secure document viewer
+* Wallet lookup & defaulter tracing
 
 ---
 
 ## System Architecture
 
 ```
-
-Frontend (HTML/CSS/JS)
-│
-▼
-Lucid Off-Chain Logic
-│
-▼
-Plutus Smart Contracts (Cardano)
-│
-▼
-PHP Backend ─── MySQL Database
-(Auth, KYC, Admin, Logs)
-
+┌────────────┐     ┌────────────────┐
+│  Frontend  │◄───►│  PHP Backend   │
+│ (HTML/JS)  │     │ (Auth, KYC)    │
+└─────┬──────┘     └───────┬────────┘
+      │                    │
+      ▼                    ▼
+┌────────────┐     ┌────────────────┐
+│  Lucid JS  │     │   MySQL DB     │
+│ (Offchain) │     │ (Users, KYC)   │
+└─────┬──────┘     └───────┬────────┘
+      │                    │
+      ▼                    ▼
+┌──────────────────────────────────┐
+│      Cardano Blockchain          │
+│   (Plutus Smart Contracts)       │
+└──────────────────────────────────┘
 ```
 
 ---
@@ -101,58 +112,71 @@ PHP Backend ─── MySQL Database
 ## Tech Stack
 
 ### On-Chain
-- Haskell
-- Plutus V2
+
+* **Haskell**
+* **Plutus V2**
 
 ### Off-Chain
-- Lucid
-- Blockfrost API
+
+* **Lucid**
+* **Blockfrost API**
 
 ### Frontend
-- HTML
-- CSS
-- Vanilla JavaScript
+
+* **HTML**
+* **CSS**
+* **Vanilla JavaScript**
 
 ### Backend
-- PHP
-- MySQL
-- PHPMailer (SMTP)
+
+* **PHP**
+* **MySQL**
+* **PHPMailer (SMTP)**
+
+### Tooling
+
+* XAMPP / PHP built-in server
+* phpMyAdmin
 
 ---
 
 ## Smart Contract Design
 
-- Invoices represented as NFTs
-- Datum tracks:
-  - issuer
-  - investors
-  - repayment amount
-  - repayment status
-- Validators enforce:
-  - funding rules
-  - repayment logic
-  - investor payouts
-- No trust assumptions — all enforcement is on-chain
+* Invoice validator enforces:
+
+  * funding rules
+  * repayment conditions
+  * investor payouts
+  * invoice state transitions
+* NFTs represent unique invoices
+* Datum tracks:
+
+  * issuer
+  * investors
+  * repayment terms
+  * repayment status
+
+All enforcement is **on-chain**, not trust-based.
 
 ---
 
-## Frontend & Off-Chain Logic
+## Off-Chain & Frontend
 
-- Wallet connection via Lucid
-- Invoice creation & funding UI
-- Claim voting & execution
-- Modal-based notifications
-- Wallet access validation before any action
+* Wallet connection via Lucid
+* Invoice creation & funding UI
+* Claim voting & execution
+* Modal-based UX feedback
+* Wallet access enforcement
 
 ---
 
 ## Backend & Authentication
 
-- Session-based authentication
-- Secure password hashing
-- CSRF protection
-- Email verification via SMTP
-- User ↔ wallet mapping
+* Secure session-based auth
+* Password hashing (`password_hash`)
+* CSRF protection
+* Email verification via SMTP
+* User → wallet mapping
 
 ---
 
@@ -161,38 +185,54 @@ PHP Backend ─── MySQL Database
 1. User registers (email + password)
 2. Email verification required
 3. User submits:
-   - full name
-   - phone number
-   - country
-   - business name (optional)
-   - ID document
-4. Admin reviews KYC
-5. Status set to `approved`, `rejected`, or `pending`
 
-Only **approved users** can access the dApp.
+   * full name
+   * phone number
+   * country
+   * business name (optional)
+   * ID document
+4. Admin reviews submission
+5. Status set to:
+
+   * `approved`
+   * `rejected`
+   * `pending`
+
+Only **approved users** access the dApp.
 
 ---
 
 ## Wallet Binding & Access Control
 
-- First connected wallet is permanently bound
-- Wallet hash stored in backend
-- Any other wallet is blocked
-- Prevents evasion of repayment obligations
+* First wallet used → automatically bound
+* Wallet address hashed and stored
+* Subsequent wallet connections:
+
+  * blocked
+  * user warned via modal
+* Prevents:
+
+  * identity hopping
+  * wallet switching to evade obligations
 
 ---
 
 ## Transaction History
 
-- All dApp-initiated transactions are logged:
-  - funding
-  - repayment
-  - claims
-  - execution
-- Searchable by wallet address
-- Admin can correlate wallet to verified user
+* All **dApp-initiated transactions** are logged
+* Includes:
 
-This enables **responsible defaulter tracking** within the platform.
+  * funding
+  * repayments
+  * claims
+  * executions
+* Searchable by wallet address
+* Admin-only correlation to:
+
+  * user account
+  * KYC details
+
+This enables **defaulter tracking** without violating blockchain privacy.
 
 ---
 
@@ -201,44 +241,44 @@ This enables **responsible defaulter tracking** within the platform.
 Accessible at:
 
 ```
-
 /admin/login.php
-
 ```
 
 ### Admin Capabilities
-- Review KYC submissions
-- View uploaded documents securely
-- Approve or reject users
-- Wallet lookup → user & contact details
-- Oversight of platform compliance
+
+* Review KYC submissions
+* View uploaded documents securely
+* Approve / reject users
+* Lookup wallet addresses
+* Trace wallet → user → contact details
+
+Admin actions are fully separated from user accounts.
 
 ---
 
 ## Security Considerations
 
-- No KYC → no access
-- No verified wallet → no access
-- Wallet binding enforced
-- Prepared SQL statements
-- Secure document serving
-- No private keys ever stored
+* No wallet = no access
+* No KYC = no access
+* Wallet binding enforced
+* CSRF protection
+* Prepared SQL statements
+* Secure document serving
+* No private keys ever stored
 
 ---
 
 ## Local Development Setup
 
-1. Clone the repository
-2. Start MySQL and Apache (XAMPP or PHP built-in server)
-3. Import database schema
-4. Configure `config.php`
-5. Open in browser:
+1. Clone repo
+2. Start **MySQL** and **Apache**
+3. Configure database
+4. Update `config.php`
+5. Run via:
 
-```
-
-[http://localhost/Invoice-Finance](http://localhost/Invoice-Finance)
-
-````
+   ```
+   http://localhost/Invoice-Finance
+   ```
 
 ---
 
@@ -259,9 +299,9 @@ MAIL_PORT
 MAIL_USERNAME
 MAIL_PASSWORD
 MAIL_FROM_EMAIL
-````
+```
 
-⚠️ Do not commit real credentials.
+⚠️ Do **not** commit real credentials.
 
 ---
 
@@ -276,28 +316,28 @@ MAIL_FROM_EMAIL
 
 ---
 
-## User & Platform Flow
+## Usage Flow
 
-1. Register
-2. Verify email
-3. Submit KYC
-4. Admin approval
-5. Connect wallet
-6. Wallet binding
-7. Invoice financing actions
-8. Transaction logging
-9. Admin oversight
+1. User registers
+2. Verifies email
+3. Completes KYC
+4. Admin approves
+5. User connects wallet
+6. Wallet bound
+7. Invoice financing enabled
+8. Transactions logged
+9. Admin oversight active
 
 ---
 
 ## Limitations & Future Improvements
 
-* Chain-wide transaction indexing
-* Automated repayment reminders
+* Chain-wide transaction indexing (optional)
+* Cron-based tx confirmation checks
 * Risk scoring & default flags
 * Multi-wallet support (optional)
-* Analytics dashboard
 * Custom domain email sender
+* UI dashboard analytics
 
 ---
 
@@ -306,15 +346,4 @@ MAIL_FROM_EMAIL
 MIT License
 Free to use, modify, and extend.
 
-```
-
 ---
-
-If you want next:
-- **Grant-style README**
-- **Whitepaper**
-- **Architecture diagrams**
-- **Demo walkthrough section**
-
-Just tell me what you want to add.
-```
