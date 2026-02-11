@@ -26,6 +26,15 @@ $assetUnit = isset($input['asset_unit']) && $input['asset_unit'] !== ''
   ? trim((string)$input['asset_unit'])
   : 'lovelace';
 
+// ✅ NEW: optional invoice economics (must be sent as strings from JS)
+$faceValue = isset($input['face_value_lovelace']) && $input['face_value_lovelace'] !== ''
+  ? (string)$input['face_value_lovelace']
+  : null;
+
+$repaymentValue = isset($input['repayment_lovelace']) && $input['repayment_lovelace'] !== ''
+  ? (string)$input['repayment_lovelace']
+  : null;
+
 if ($txHash === '' || $actionType === '' || $actorAddr === '') {
   http_response_code(400);
   echo json_encode(['ok' => false, 'error' => 'Missing required fields.']);
@@ -41,15 +50,18 @@ try {
   $stmt = $pdo->prepare("
     INSERT INTO invoice_transactions
       (tx_hash, action_type, invoice_ref, actor_wallet_address, actor_wallet_hash,
-       counterparty_wallet_address, counterparty_wallet_hash, amount_lovelace, asset_unit, status)
+       counterparty_wallet_address, counterparty_wallet_hash,
+       amount_lovelace, asset_unit, face_value_lovelace, repayment_lovelace, status)
     VALUES
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted')
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted')
     ON DUPLICATE KEY UPDATE
       invoice_ref = VALUES(invoice_ref),
       counterparty_wallet_address = VALUES(counterparty_wallet_address),
       counterparty_wallet_hash = VALUES(counterparty_wallet_hash),
       amount_lovelace = VALUES(amount_lovelace),
-      asset_unit = VALUES(asset_unit)
+      asset_unit = VALUES(asset_unit),
+      face_value_lovelace = VALUES(face_value_lovelace),
+      repayment_lovelace = VALUES(repayment_lovelace)
   ");
 
   $stmt->execute([
@@ -61,7 +73,9 @@ try {
     $counterAddr,
     $counterHash,
     $amount,
-    $assetUnit
+    $assetUnit,
+    $faceValue,
+    $repaymentValue
   ]);
 
   echo json_encode(['ok' => true]);
