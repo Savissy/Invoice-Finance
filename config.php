@@ -62,9 +62,16 @@ const KYC_ALLOWED_MIME_TYPES = [
  *
  * NOTE: Do NOT commit real credentials to a public GitHub repo.
  */
-const MAIL_HOST = 'smtp.gmail.com';
-const MAIL_PORT = 587;
-const MAIL_USERNAME = 'precioussammy75@gmail.com';     // <-- change this
-const MAIL_PASSWORD = 'ypym kooq vatm jgoo';    // <-- change this (App Password)
-const MAIL_FROM_EMAIL = 'precioussammy75@gmail.com';   // <-- change this
-const MAIL_FROM_NAME = 'Invoice Finance';
+/* =====================================================
+   MAIL CONFIG (Brevo SMTP)
+===================================================== */
+
+define('MAIL_HOST', 'smtp-relay.brevo.com');
+define('MAIL_PORT', 587);
+
+define('MAIL_USERNAME', 'a295d8001@smtp-brevo.com'); 
+define('MAIL_PASSWORD', 'xsmtpsib-1ddf3b48ade1e3180bd27d00412708bdd3ad4cf7271a30084cf630c97184e66b-duYVye4ltnC1AAqn');
+
+define('MAIL_FROM_EMAIL', 'precioussammy75@gmail.com');
+define('MAIL_FROM_NAME', 'InsuFinance');
+
