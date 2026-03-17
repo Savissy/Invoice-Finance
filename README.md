@@ -87,7 +87,7 @@ Unlike simple DeFi demos, this platform integrates:
 ---
 
 ## System Architecture
-
+```
 sequenceDiagram
     participant User
     participant UI
@@ -99,7 +99,7 @@ sequenceDiagram
     Lucid->>Blockchain: Submit TX
     Blockchain-->>UI: Confirmation
 
----
+```
 
 ## Tech Stack
 
