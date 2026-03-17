@@ -88,24 +88,16 @@ Unlike simple DeFi demos, this platform integrates:
 
 ## System Architecture
 
-```
-┌────────────┐     ┌────────────────┐
-│  Frontend  │◄───►│  PHP Backend   │
-│ (HTML/JS)  │     │ (Auth, KYC)    │
-└─────┬──────┘     └───────┬────────┘
-      │                    │
-      ▼                    ▼
-┌────────────┐     ┌────────────────┐
-│  Lucid JS  │     │   MySQL DB     │
-│ (Offchain) │     │ (Users, KYC)   │
-└─────┬──────┘     └───────┬────────┘
-      │                    │
-      ▼                    ▼
-┌──────────────────────────────────┐
-│      Cardano Blockchain          │
-│   (Plutus Smart Contracts)       │
-└──────────────────────────────────┘
-```
+sequenceDiagram
+    participant User
+    participant UI
+    participant Lucid
+    participant Blockchain
+
+    User->>UI: Create Invoice
+    UI->>Lucid: Build TX
+    Lucid->>Blockchain: Submit TX
+    Blockchain-->>UI: Confirmation
 
 ---
 
