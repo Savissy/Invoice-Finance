@@ -88,16 +88,29 @@ Unlike simple DeFi demos, this platform integrates:
 
 ## System Architecture
 ```
-sequenceDiagram
-    participant User
-    participant UI
-    participant Lucid
-    participant Blockchain
+flowchart LR
 
-    User->>UI: Create Invoice
-    UI->>Lucid: Build TX
-    Lucid->>Blockchain: Submit TX
-    Blockchain-->>UI: Confirmation
+    User[User Wallet<br/>Lace / Nami]
+
+    UI[Frontend<br/>HTML CSS JS]
+
+    Offchain[Off-chain Layer<br/>Lucid JS]
+
+    Onchain[Smart Contract<br/>Plutus Validator]
+
+    Backend[Backend API<br/>PHP]
+
+    DB[(Database<br/>MySQL)]
+
+    Cardano[(Cardano Blockchain)]
+
+    User --> UI
+    UI --> Offchain
+    Offchain --> Cardano
+    Cardano --> Onchain
+
+    UI --> Backend
+    Backend --> DB
 
 ```
 
