@@ -87,7 +87,7 @@ Unlike simple DeFi demos, this platform integrates:
 ---
 
 ## System Architecture
-```
+```mermaid
 flowchart LR
 
     User[User Wallet<br/>Lace / Nami]
